@@ -1,18 +1,33 @@
-// Load environment variables from a .env file into process.env
 require("dotenv").config();
-
 const express = require("express");
-const geminiRoutes = require("./routes/GeminiAPI");
+const cors = require("cors");
 const app = express();
-const PORT = process.env.PORT || 3000; // Default to port 3000 if PORT is not set
+const port = 5000;
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const apiKey = process.env.GEMINI_API_KEY;
 
-// Middleware to parse JSON bodies
+app.use(cors());
 app.use(express.json());
+app.post("/api/process-request", async (req, res) => {
+  const userInput = req.body.userInput;
+  console.log("Received user input:", userInput);
 
-// Use the GeminiAPI routes
-// app.use("/api/gemini", geminiRoutes);
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+    const result = await model.generateContent(userInput);
+
+    // Extract the text from the Gemini response
+    const responseText = result.response.text();
+    // console.log(responseText);
+    res.json({ result: responseText });
+  } catch (error) {
+    console.error("Error generating content with Gemini:", error);
+    res.status(500).json({ error: "Failed to process request" });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server listening at http://localhost:${port}`);
 });

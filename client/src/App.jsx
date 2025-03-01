@@ -1,11 +1,16 @@
 import React from "react";
-import Hero from "./components/Hero/Hero";
+import Home from "./pages/Home page/Home";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Builder from "./pages/Builder page/Builder";
 function App() {
   return (
     <div>
-      <div className="mt-50">
-        <Hero />
-      </div>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/builder" element={<Builder />} />
+        </Routes>
+      </BrowserRouter>
     </div>
   );
 }

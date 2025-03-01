@@ -10,7 +10,17 @@
 } */
 body {
   /* background-color: #262424; */
-  background: linear-gradient(145deg, black, #262424);
+  background: linear-gradient(
+    135deg,
+    hsl(0deg 0% 0%) 0%,
+    hsl(0deg 21% 3%) 10%,
+    hsl(0deg 9% 6%) 25%,
+    hsl(0deg 5% 8%) 47%,
+    hsl(360deg 4% 10%) 68%,
+    hsl(360deg 3% 11%) 83%,
+    hsl(360deg 3% 13%) 93%,
+    hsl(0deg 3% 15%) 100%
+  );
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
