@@ -161,7 +161,13 @@ class WebContainerService {
       // Start the server process
       const serverProcess = await this.webcontainerInstance.spawn(
         command,
-        args
+        args,
+        {
+          terminal: {
+            cols: 80,
+            rows: 30,
+          },
+        }
       );
 
       // Forward output to terminal

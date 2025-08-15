@@ -84,7 +84,7 @@ function Builder() {
   return (
     <div className=" min-h-screen">
       <div className="text-white grid grid-cols-6 grid-rows-6 gap-4 m-10 pt-10">
-        <div className="chat-section  col-span-2 row-span-5 flex flex-col h-[88vh]">
+        <div className="chat-section col-span-2 row-span-5 flex flex-col h-[88vh] bg-gray-800 rounded-lg">
           <div className="flex justify-between items-center p-3 border-b">
             <h1 className="text-xl font-bold">Chat History</h1>
             <button
@@ -164,7 +164,7 @@ function Builder() {
         </div>
 
         <div className="Editor-section col-span-4 row-span-5 row-start-1 col-start-3 h-[85vh] overflow-auto scrollbar-hide">
-          <div>
+          <div className="bg-gray-900 rounded-lg h-full">
             <Monaco_Editor />
           </div>
         </div>

@@ -8,11 +8,21 @@ const apiKey = process.env.GEMINI_API_KEY;
 
 app.use(cors());
 app.use(express.json());
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'Server is running' });
+});
+
 app.post("/api/process-request", async (req, res) => {
   const userInput = req.body.userInput;
   console.log("Received user input:", userInput);
 
   try {
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+    
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 

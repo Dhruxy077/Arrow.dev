@@ -385,22 +385,20 @@ const CodeEditorWithPreview = () => {
       // Create a random port between 3001-3999 to avoid conflicts
       const port = Math.floor(Math.random() * 999) + 3001;
 
-      // First, create a simple Express server file
+      // Create a simple Express server file
       await webContainerService.writeFile(
         "server.js",
-        `
-        import express from 'express';
-        const app = express();
-        const port = ${port};
-        
-        app.get('/', (req, res) => {
-          res.send('<h1>Welcome to a WebContainers app! 🎉</h1><p>Welcome to a WebContainers app! 🎉</p><p>Welcome to a WebContainers app! 🎉</p>');
-        });
-        
-        app.listen(port, () => {
-          console.log(\`Server running at http://localhost:\${port}\`);
-        });
-      `
+        `import express from 'express';
+const app = express();
+const port = ${port};
+
+app.get('/', (req, res) => {
+  res.send('<h1>Welcome to a WebContainers app! 🎉</h1><p>This is your Express server running in the browser!</p>');
+});
+
+app.listen(port, () => {
+  console.log(\`Server running at http://localhost:\${port}\`);
+});`
       );
 
       // Update package.json to include Express
@@ -471,19 +469,18 @@ const CodeEditorWithPreview = () => {
         "index.html": {
           file: {
             contents: `
-              <!DOCTYPE html>
-              <html lang="en">
-                <head>
-                  <meta charset="UTF-8" />
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                  <title>Vite App</title>
-                </head>
-                <body>
-                  <div id="app"></div>
-                  <script type="module" src="/main.js"></script>
-                </body>
-              </html>
-            `,
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>`,
           },
         },
         "main.js": {

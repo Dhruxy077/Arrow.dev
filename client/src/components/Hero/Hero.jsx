@@ -10,7 +10,6 @@ function Hero() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const apiUrl = import.meta.env.VITE_API_URL;
 
   const handleInputchange = (e) => {
     setuserInput(e.target.value);
