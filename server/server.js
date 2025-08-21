@@ -24,7 +24,7 @@ app.post("/api/process-request", async (req, res) => {
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
 
     const result = await model.generateContent(userInput);
 
