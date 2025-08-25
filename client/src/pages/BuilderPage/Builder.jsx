@@ -7,6 +7,7 @@ import Header from "../../components/Header/Header";
 import FileTree from "../../components/FileTree/FileTree";
 import CodeEditor from "../../components/CodeEditor/CodeEditor";
 import Terminal from "../../components/Terminal/Terminal";
+import Chat from "../../components/Chat/Chat";
 
 const Builder = () => {
   const location = useLocation();
@@ -93,14 +94,31 @@ const Builder = () => {
     setCode(value || "");
   };
 
+  const handleCodeGenerated = (generatedCode) => {
+    // Extract code from AI response if it contains code blocks
+    const codeMatch = generatedCode.match(/```(?:javascript|js|jsx|html|css)?\n?([\s\S]*?)```/);
+    if (codeMatch) {
+      setCode(codeMatch[1].trim());
+    } else if (generatedCode.includes('function') || generatedCode.includes('const') || generatedCode.includes('let')) {
+      // If it looks like code but doesn't have code blocks, use it directly
+      setCode(generatedCode);
+    }
+  };
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       <Header />
       
       <div className="flex-1 flex">
         <PanelGroup direction="horizontal">
+          {/* Chat Panel */}
+          <Panel defaultSize={25} minSize={20} maxSize={35}>
+            <Chat onCodeGenerated={handleCodeGenerated} />
+          </Panel>
+          
+          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
+          
           {/* File Tree Panel */}
-          <Panel defaultSize={20} minSize={15} maxSize={30}>
+          <Panel defaultSize={20} minSize={15} maxSize={25}>
             <FileTree 
               onFileSelect={handleFileSelect}
               selectedFile={selectedFile}
@@ -110,7 +128,7 @@ const Builder = () => {
           <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
           
           {/* Main Content Panel */}
-          <Panel defaultSize={80}>
+          <Panel defaultSize={55}>
             <PanelGroup direction="vertical">
               {/* Code Editor Panel */}
               <Panel defaultSize={70} minSize={30}>
