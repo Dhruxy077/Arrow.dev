@@ -1,4 +1,29 @@
 @import "tailwindcss";
 body {
-  background-color: black;
+  background-color: #0a0a0a;
+  color: #ffffff;
+}
+
+/* Dark theme for Monaco Editor */
+.monaco-editor {
+  background-color: #1a1a1a !important;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
 }

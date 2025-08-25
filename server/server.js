@@ -26,12 +26,68 @@ app.post("/api/process-request", async (req, res) => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" });
 
-    const result = await model.generateContent(userInput);
+    // Enhanced prompt for structured code generation
+    const enhancedPrompt = `
+You are an expert web developer assistant. Generate complete, production-ready code based on the user's request.
+
+IMPORTANT: Always respond with a JSON structure containing files and their contents. Format your response as:
+
+{
+  "files": {
+    "filename.ext": {
+      "content": "file content here"
+    }
+  },
+  "explanation": "Brief explanation of what was created"
+}
+
+For web applications, always include:
+- index.html (main HTML file)
+- style.css (CSS styling)
+- script.js (JavaScript functionality)
+- package.json (if Node.js dependencies are needed)
+
+Make the code modern, responsive, and production-ready with proper styling.
+
+User request: ${userInput}
+`;
+
+    const result = await model.generateContent(enhancedPrompt);
 
     // Extract the text from the Gemini response
     const responseText = result.response.text();
-    // console.log(responseText);
-    res.json({ result: responseText });
+    
+    // Try to parse JSON response, fallback to plain text
+    let parsedResponse;
+    try {
+      // Extract JSON from response if it's wrapped in markdown
+      const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) || responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedResponse = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+      } else {
+        // Fallback: create a simple structure
+        parsedResponse = {
+          files: {
+            "index.html": {
+              content: responseText
+            }
+          },
+          explanation: "Generated code based on your request"
+        };
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, create a simple structure
+      parsedResponse = {
+        files: {
+          "index.html": {
+            content: responseText
+          }
+        },
+        explanation: "Generated code based on your request"
+      };
+    }
+    
+    res.json({ result: parsedResponse });
   } catch (error) {
     console.error("Error generating content with Gemini:", error);
     res.status(500).json({ error: "Failed to process request" });

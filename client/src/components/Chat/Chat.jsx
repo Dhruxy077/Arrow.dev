@@ -24,13 +24,13 @@ const Chat = ({ onCodeGenerated }) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (messageContent = inputValue) => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = {
       id: Date.now(),
       type: 'user',
-      content: inputValue,
+      content: messageContent,
       timestamp: new Date()
     };
 
@@ -39,12 +39,12 @@ const Chat = ({ onCodeGenerated }) => {
     setIsLoading(true);
 
     try {
-      const response = await processRequest(inputValue);
+      const response = await processRequest(messageContent);
       
       const assistantMessage = {
         id: Date.now() + 1,
         type: 'assistant',
-        content: response.result,
+        content: typeof response.result === 'string' ? response.result : JSON.stringify(response.result, null, 2),
         timestamp: new Date()
       };
 
