@@ -1,23 +1,22 @@
-// src/pages/BuilderPage/Builder.jsx
-
 import React, { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { WebContainer } from "@webcontainer/api";
-import Editor from "@monaco-editor/react";
-import { PanelGroup, Panel } from "react-resizable-panels";
-import { Folder, Code, Eye } from "lucide-react";
+import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 import { files as initialFiles } from "../../components/WebContainer/files.js";
-import TerminalPanel from "../../components/WebContainer/TerminalPanel.jsx";
+import Header from "../../components/Header/Header";
+import FileTree from "../../components/FileTree/FileTree";
+import CodeEditor from "../../components/CodeEditor/CodeEditor";
+import Terminal from "../../components/Terminal/Terminal";
 
 const Builder = () => {
   const location = useLocation();
   const { userInput, aiResponse } = location.state || {};
   
   const [code, setCode] = useState(initialFiles["index.js"].file.contents);
-  const [mainView, setMainView] = useState("code");
   const [serverUrl, setServerUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState("index.js");
+  const [isServerRunning, setIsServerRunning] = useState(false);
   const webcontainerInstanceRef = useRef(null);
-  // --- 1. ADD NEW STATE ---
   const [isContainerReady, setIsContainerReady] = useState(false);
   const didBootRef = useRef(false);
 
@@ -40,6 +39,7 @@ const Builder = () => {
     didBootRef.current = true;
     
     if (webcontainerInstanceRef.current) return;
+    
     const bootWebContainer = async () => {
       console.log("Booting WebContainer...");
       const wc = await WebContainer.boot();
@@ -52,20 +52,25 @@ const Builder = () => {
       );
       await installProcess.exit;
 
-      // --- 2. SET STATE TO TRUE AFTER INSTALL ---
       setIsContainerReady(true);
 
       const startProcess = await wc.spawn("npm", ["run", "start"]);
       startProcess.output.pipeTo(
         new WritableStream({ write: (data) => console.log(data) })
       );
+      
       wc.on("server-ready", (port, url) => {
         setServerUrl(url);
+        setIsServerRunning(true);
       });
     };
+    
     bootWebContainer();
+    
     return () => {
-      webcontainerInstanceRef.current?.teardown();
+      if (webcontainerInstanceRef.current) {
+        webcontainerInstanceRef.current.teardown();
+      }
     };
   }, []);
 
@@ -78,71 +83,58 @@ const Builder = () => {
     updateFile();
   }, [code, isContainerReady]);
 
+  const handleFileSelect = (filePath) => {
+    setSelectedFile(filePath);
+    // In a real implementation, you would load the file content here
+    console.log("Selected file:", filePath);
+  };
+
+  const handleCodeChange = (value) => {
+    setCode(value || "");
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">
-      <PanelGroup direction="horizontal" className="flex-grow">
-        <Panel defaultSize={15} minSize={10}>
-          <div className="flex flex-col h-full bg-gray-800 p-4">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <Folder size={20} /> Files
-            </h2>
-          </div>
-        </Panel>
-        <Panel defaultSize={85}>
-          <PanelGroup direction="vertical">
-            <Panel defaultSize={70} minSize={20}>
-              <div className="flex flex-col h-full bg-gray-800">
-                <div className="flex-shrink-0 flex gap-2 p-2 border-b border-gray-700">
-                  <button
-                    onClick={() => setMainView("code")}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm rounded ${
-                      mainView === "code" ? "bg-blue-600" : "hover:bg-gray-700"
-                    }`}
-                  >
-                    <Code size={16} /> Code
-                  </button>
-                  <button
-                    onClick={() => setMainView("preview")}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm rounded ${
-                      mainView === "preview"
-                        ? "bg-blue-600"
-                        : "hover:bg-gray-700"
-                    }`}
-                  >
-                    <Eye size={16} /> Preview
-                  </button>
-                </div>
-                <div className="flex-grow relative">
-                  {mainView === "code" && (
-                    <Editor
-                      height="100%"
-                      theme="vs-dark"
-                      defaultLanguage="javascript"
-                      value={code}
-                      onChange={(val) => setCode(val || "")}
-                    />
-                  )}
-                  {mainView === "preview" && (
-                    <iframe
-                      src={serverUrl}
-                      className="w-full h-full bg-white border-0"
-                      title="Preview"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                    />
-                  )}
-                </div>
-              </div>
-            </Panel>
-            <Panel defaultSize={30} minSize={10}>
-              {/* --- 3. PASS THE NEW STATE AS A PROP --- */}
-              <TerminalPanel
-                webcontainerInstance={webcontainerInstanceRef.current}
-                isContainerReady={isContainerReady}
-              />
-            </Panel>
-          </PanelGroup>
-        </Panel>
-      </PanelGroup>
+    <div className="flex flex-col h-screen bg-gray-900 text-white">
+      <Header />
+      
+      <div className="flex-1 flex">
+        <PanelGroup direction="horizontal">
+          {/* File Tree Panel */}
+          <Panel defaultSize={20} minSize={15} maxSize={30}>
+            <FileTree 
+              onFileSelect={handleFileSelect}
+              selectedFile={selectedFile}
+            />
+          </Panel>
+          
+          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
+          
+          {/* Main Content Panel */}
+          <Panel defaultSize={80}>
+            <PanelGroup direction="vertical">
+              {/* Code Editor Panel */}
+              <Panel defaultSize={70} minSize={30}>
+                <CodeEditor
+                  code={code}
+                  onChange={handleCodeChange}
+                  serverUrl={serverUrl}
+                  isServerRunning={isServerRunning}
+                />
+              </Panel>
+              
+              <PanelResizeHandle className="h-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
+              
+              {/* Terminal Panel */}
+              <Panel defaultSize={30} minSize={20}>
+                <Terminal
+                  webcontainerInstance={webcontainerInstanceRef.current}
+                  isContainerReady={isContainerReady}
+                />
+              </Panel>
+            </PanelGroup>
+          </Panel>
+        </PanelGroup>
+      </div>
     </div>
   );
 };
