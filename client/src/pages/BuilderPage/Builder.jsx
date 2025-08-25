@@ -1,6 +1,7 @@
 // src/pages/BuilderPage/Builder.jsx
 
 import React, { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { WebContainer } from "@webcontainer/api";
 import Editor from "@monaco-editor/react";
 import { PanelGroup, Panel } from "react-resizable-panels";
@@ -9,6 +10,9 @@ import { files as initialFiles } from "../../components/WebContainer/files.js";
 import TerminalPanel from "../../components/WebContainer/TerminalPanel.jsx";
 
 const Builder = () => {
+  const location = useLocation();
+  const { userInput, aiResponse } = location.state || {};
+  
   const [code, setCode] = useState(initialFiles["index.js"].file.contents);
   const [mainView, setMainView] = useState("code");
   const [serverUrl, setServerUrl] = useState("");
@@ -16,6 +20,20 @@ const Builder = () => {
   // --- 1. ADD NEW STATE ---
   const [isContainerReady, setIsContainerReady] = useState(false);
   const didBootRef = useRef(false);
+
+  // Update code with AI response when available
+  useEffect(() => {
+    if (aiResponse) {
+      // Try to extract code from AI response
+      const codeMatch = aiResponse.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
+      if (codeMatch) {
+        setCode(codeMatch[1].trim());
+      } else {
+        // If no code blocks found, use the response as is (might be plain code)
+        setCode(aiResponse);
+      }
+    }
+  }, [aiResponse]);
 
   useEffect(() => {
     if (didBootRef.current) return;

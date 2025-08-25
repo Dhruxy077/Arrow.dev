@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { processRequest } from "../../services/api";
 import "./Hero.css";
 import { ArrowRight, CircleSlash, Link } from "lucide-react";
 
@@ -16,22 +17,28 @@ const Hero = () => {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (userInput && userInput.trim() !== "") {
-        handlesubmit();
-        navigate("/builder", { state: { userInput: userInput } });
-      }
+      handlesubmit();
     }
   };
 
   const handlesubmit = async () => {
+    if (!userInput || userInput.trim() === "") return;
+    
     setLoading(true);
     setError(null);
 
     try {
-      // console.log(userInput);
+      const response = await processRequest(userInput);
+      // Navigate to builder with both user input and AI response
+      navigate("/builder", { 
+        state: { 
+          userInput: userInput,
+          aiResponse: response.result 
+        } 
+      });
     } catch (error) {
       console.error("error submitting the message:", error.message);
-      setError("Failed to process the request.");
+      setError(error.message || "Failed to process the request.");
     } finally {
       setLoading(false);
     }
@@ -55,7 +62,7 @@ const Hero = () => {
           <button
             className="bg-amber-50 rounded-xl size-10 flex items-center justify-center ml-0 mr-1 mt-0 mb-1"
             onClick={handlesubmit}
-            disabled={loading}
+            disabled={loading || !userInput.trim()}
           >
             {loading ? (
               <CircleSlash size={20} color="black" strokeWidth={2} />
