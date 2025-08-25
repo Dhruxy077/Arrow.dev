@@ -49,12 +49,12 @@ const Builder = () => {
 
   useEffect(() => {
     const updateFile = async () => {
-      if (webcontainerInstanceRef.current) {
+      if (webcontainerInstanceRef.current && isContainerReady) {
         await webcontainerInstanceRef.current.fs.writeFile("/index.js", code);
       }
     };
     updateFile();
-  }, [code]);
+  }, [code, isContainerReady]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white font-sans">
@@ -103,8 +103,9 @@ const Builder = () => {
                   {mainView === "preview" && (
                     <iframe
                       src={serverUrl}
-                      className="w-full h-full bg-white"
+                      className="w-full h-full bg-white border-0"
                       title="Preview"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
                     />
                   )}
                 </div>
