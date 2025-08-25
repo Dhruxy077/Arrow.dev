@@ -15,8 +15,12 @@ const Builder = () => {
   const webcontainerInstanceRef = useRef(null);
   // --- 1. ADD NEW STATE ---
   const [isContainerReady, setIsContainerReady] = useState(false);
+  const didBootRef = useRef(false);
 
   useEffect(() => {
+    if (didBootRef.current) return;
+    didBootRef.current = true;
+    
     if (webcontainerInstanceRef.current) return;
     const bootWebContainer = async () => {
       console.log("Booting WebContainer...");
