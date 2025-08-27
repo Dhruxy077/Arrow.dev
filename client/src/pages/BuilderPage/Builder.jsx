@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { WebContainer } from "@webcontainer/api";
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 import Header from "../../components/Header/Header";
@@ -8,284 +7,289 @@ import CodeEditor from "../../components/CodeEditor/CodeEditor";
 import Terminal from "../../components/Terminal/Terminal";
 import Chat from "../../components/Chat/Chat";
 
+// A minimal package.json to start the container
+const initialFiles = {
+  "package.json": {
+    file: {
+      contents: JSON.stringify(
+        {
+          name: "webcontainer-app",
+          private: true,
+          type: "module",
+          scripts: {
+            dev: "vite",
+            start: "vite",
+            build: "vite build",
+          },
+          dependencies: {
+            react: "^18.2.0",
+            "react-dom": "^18.2.0",
+          },
+          devDependencies: {
+            "@vitejs/plugin-react": "^4.2.0",
+            vite: "^5.0.0",
+          },
+        },
+        null,
+        2
+      ),
+    },
+  },
+};
+
 const Builder = () => {
-  const location = useLocation();
-  const { userInput, aiResponse } = location.state || {};
-  
-  const [files, setFiles] = useState({
-    'index.html': {
-      content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My App</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Welcome to your app!</h1>
-        <p>Start building something amazing...</p>
-    </div>
-    <script src="script.js"></script>
-</body>
-</html>`
-    },
-    'style.css': {
-      content: `body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.container {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    text-align: center;
-    max-width: 500px;
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 1rem;
-}
-
-p {
-    color: #666;
-    line-height: 1.6;
-}`
-    },
-    'script.js': {
-      content: `console.log('App loaded successfully!');
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded');
-});`
-    }
-  });
+  const [files, setFiles] = useState({});
   const [serverUrl, setServerUrl] = useState("");
-  const [selectedFile, setSelectedFile] = useState("index.html");
+  const [selectedFile, setSelectedFile] = useState("");
   const [isServerRunning, setIsServerRunning] = useState(false);
-  const webcontainerInstanceRef = useRef(null);
   const [isContainerReady, setIsContainerReady] = useState(false);
-  const didBootRef = useRef(false);
-
-  // Update code with AI response when available
-  useEffect(() => {
-    if (aiResponse) {
-      if (typeof aiResponse === 'object' && aiResponse.files) {
-        // Structured response from backend
-        const newFiles = {};
-        Object.keys(aiResponse.files).forEach(fileName => {
-          newFiles[fileName] = {
-            content: aiResponse.files[fileName].content || aiResponse.files[fileName]
-          };
-        });
-        setFiles(newFiles);
-        // Set the first file as selected
-        const firstFile = Object.keys(newFiles)[0];
-        if (firstFile) {
-          setSelectedFile(firstFile);
-        }
-      } else {
-        // Fallback for plain text response
-        const codeMatch = aiResponse.match(/```(?:javascript|js|html|css)?\n?([\s\S]*?)```/);
-        if (codeMatch) {
-          setFiles(prev => ({
-            ...prev,
-            [selectedFile]: { content: codeMatch[1].trim() }
-          }));
-        }
-      }
-    }
-  }, [aiResponse]);
-
-  // Convert files to WebContainer format
-  const getWebContainerFiles = () => {
-    const webContainerFiles = {};
-    Object.keys(files).forEach(fileName => {
-      webContainerFiles[fileName] = {
-        file: {
-          contents: files[fileName].content
-        }
-      };
-    });
-    
-    // Add package.json if not present
-    if (!webContainerFiles['package.json']) {
-      webContainerFiles['package.json'] = {
-        file: {
-          contents: JSON.stringify({
-            name: "webcontainer-app",
-            type: "module",
-            dependencies: {
-              "express": "latest"
-            },
-            scripts: {
-              "start": "node server.js"
-            }
-          }, null, 2)
-        }
-      };
-    }
-    
-    // Add server.js if not present
-    if (!webContainerFiles['server.js']) {
-      webContainerFiles['server.js'] = {
-        file: {
-          contents: `import express from 'express';
-import { createServer } from 'http';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const app = express();
-const server = createServer(app);
-
-// Serve static files
-app.use(express.static('.'));
-
-const PORT = 3111;
-server.listen(PORT, () => {
-  console.log(\`Server running at http://localhost:\${PORT}\`);
-});`
-        }
-      };
-    }
-    
-    return webContainerFiles;
-  };
+  const [isLoading, setIsLoading] = useState(false);
+  const webcontainerInstanceRef = useRef(null);
+  const hasBootedRef = useRef(false);
 
   useEffect(() => {
-    if (didBootRef.current) return;
-    didBootRef.current = true;
-    
-    if (webcontainerInstanceRef.current) return;
-    
+    if (hasBootedRef.current) return;
+    hasBootedRef.current = true;
+
     const bootWebContainer = async () => {
-      console.log("Booting WebContainer...");
-      const wc = await WebContainer.boot();
-      webcontainerInstanceRef.current = wc;
-      await wc.mount(getWebContainerFiles());
+      try {
+        console.log("1. Booting WebContainer...");
+        const wc = await WebContainer.boot();
+        webcontainerInstanceRef.current = wc;
 
-      const installProcess = await wc.spawn("npm", ["install"]);
-      installProcess.output.pipeTo(
-        new WritableStream({ write: (data) => console.log(data) })
-      );
-      await installProcess.exit;
+        console.log("2. Mounting initial files...");
+        await wc.mount(initialFiles);
 
-      setIsContainerReady(true);
+        console.log("3. Container is ready.");
+        setIsContainerReady(true);
 
-      const startProcess = await wc.spawn("npm", ["run", "start"]);
-      startProcess.output.pipeTo(
-        new WritableStream({ write: (data) => console.log(data) })
-      );
-      
-      wc.on("server-ready", (port, url) => {
-        setServerUrl(url);
-        setIsServerRunning(true);
-      });
+        wc.on("server-ready", (port, url) => {
+          console.log(`4. Server is ready at: ${url}`);
+          setServerUrl(url);
+          setIsServerRunning(true);
+        });
+      } catch (error) {
+        console.error("Error during WebContainer boot:", error);
+      }
     };
-    
+
     bootWebContainer();
-    
+
     return () => {
       if (webcontainerInstanceRef.current) {
+        console.log("Tearing down WebContainer instance...");
         webcontainerInstanceRef.current.teardown();
       }
     };
-  }, [files]);
-
-  useEffect(() => {
-    const updateFile = async () => {
-      if (webcontainerInstanceRef.current && isContainerReady && selectedFile && files[selectedFile]) {
-        await webcontainerInstanceRef.current.fs.writeFile(`/${selectedFile}`, files[selectedFile].content);
-      }
-    };
-    updateFile();
-  }, [files, selectedFile, isContainerReady]);
+  }, []);
 
   const handleFileSelect = (filePath) => {
     setSelectedFile(filePath);
   };
 
-  const handleCodeChange = (value, fileName = selectedFile) => {
-    if (fileName) {
-      setFiles(prev => ({
-        ...prev,
-        [fileName]: { content: value || "" }
-      }));
+  const handleCodeChange = async (value, fileName = selectedFile) => {
+    if (fileName && webcontainerInstanceRef.current) {
+      // Update local state
+      const newFiles = { ...files };
+      newFiles[fileName] = { content: value };
+      setFiles(newFiles);
+
+      try {
+        // Write to WebContainer filesystem
+        await webcontainerInstanceRef.current.fs.writeFile(fileName, value);
+      } catch (error) {
+        console.error("Error writing file to WebContainer:", error);
+      }
     }
   };
 
-  const handleCodeGenerated = (response) => {
-    if (typeof response === 'object' && response.files) {
-      // Structured response
-      const newFiles = {};
-      Object.keys(response.files).forEach(fileName => {
-        newFiles[fileName] = {
-          content: response.files[fileName].content || response.files[fileName]
-        };
-      });
-      setFiles(newFiles);
-      
-      // Set the first file as selected
-      const firstFile = Object.keys(newFiles)[0];
+  const createDirectoryStructure = async (filePath) => {
+    const pathParts = filePath.split("/");
+    pathParts.pop(); // Remove filename
+
+    let currentPath = "";
+    for (const part of pathParts) {
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+      try {
+        await webcontainerInstanceRef.current.fs.mkdir(currentPath, {
+          recursive: true,
+        });
+      } catch (error) {
+        // Directory might already exist, which is fine
+      }
+    }
+  };
+
+  const installDependencies = async (packageJsonContent) => {
+    try {
+      const packageJson = JSON.parse(packageJsonContent);
+      if (packageJson.dependencies || packageJson.devDependencies) {
+        console.log("Installing dependencies...");
+        const installProcess = await webcontainerInstanceRef.current.spawn(
+          "npm",
+          ["install"]
+        );
+
+        installProcess.output.pipeTo(
+          new WritableStream({
+            write: (data) => console.log("npm install:", data),
+          })
+        );
+
+        const exitCode = await installProcess.exit;
+        if (exitCode !== 0) {
+          console.error("npm install failed");
+        } else {
+          console.log("Dependencies installed successfully");
+        }
+      }
+    } catch (error) {
+      console.error("Error installing dependencies:", error);
+    }
+  };
+
+  const startDevServer = async () => {
+    try {
+      console.log("Starting development server...");
+      const devProcess = await webcontainerInstanceRef.current.spawn("npm", [
+        "run",
+        "dev",
+      ]);
+
+      devProcess.output.pipeTo(
+        new WritableStream({
+          write: (data) => console.log("dev server:", data),
+        })
+      );
+    } catch (error) {
+      console.error("Error starting dev server:", error);
+    }
+  };
+
+  const handleCodeGenerated = async (response) => {
+    if (!response || !response.files || !webcontainerInstanceRef.current) {
+      console.error("Invalid response or WebContainer not ready");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const newFiles = response.files;
+      let hasPackageJson = false;
+
+      // First, create all directories and write all files
+      for (const [filename, fileData] of Object.entries(newFiles)) {
+        // Create directory structure if needed
+        await createDirectoryStructure(filename);
+
+        // Get file content - handle both string and object formats
+        let content = "";
+        if (typeof fileData === "string") {
+          content = fileData;
+        } else if (fileData && typeof fileData.content === "string") {
+          content = fileData.content;
+        } else if (fileData && typeof fileData === "object") {
+          // Handle the format from your prompt: { file: { contents: "..." } }
+          content =
+            fileData.file?.contents || JSON.stringify(fileData, null, 2);
+        }
+
+        // Write file to WebContainer
+        await webcontainerInstanceRef.current.fs.writeFile(filename, content);
+
+        if (filename === "package.json") {
+          hasPackageJson = true;
+        }
+      }
+
+      // Update React state with processed files
+      const processedFiles = {};
+      for (const [filename, fileData] of Object.entries(newFiles)) {
+        let content = "";
+        if (typeof fileData === "string") {
+          content = fileData;
+        } else if (fileData && typeof fileData.content === "string") {
+          content = fileData.content;
+        } else if (fileData && typeof fileData === "object") {
+          content =
+            fileData.file?.contents || JSON.stringify(fileData, null, 2);
+        }
+
+        processedFiles[filename] = { content };
+      }
+
+      setFiles(processedFiles);
+
+      // Install dependencies if package.json exists
+      if (hasPackageJson) {
+        const packageJsonContent =
+          processedFiles["package.json"]?.content ||
+          newFiles["package.json"]?.file?.contents ||
+          newFiles["package.json"];
+
+        if (packageJsonContent) {
+          await installDependencies(packageJsonContent);
+        }
+      }
+
+      // Start dev server after a short delay
+      setTimeout(() => {
+        startDevServer();
+      }, 2000);
+
+      // Select the main application file to display in the editor
+      const mainFiles = [
+        "src/App.jsx",
+        "src/App.js",
+        "src/main.jsx",
+        "src/index.js",
+        "index.html",
+        "app.js",
+        "server.js",
+      ];
+
+      const firstFile =
+        mainFiles.find((f) => processedFiles[f]) ||
+        Object.keys(processedFiles)[0];
+
       if (firstFile) {
         setSelectedFile(firstFile);
       }
-    } else if (typeof response === 'string') {
-      // Fallback for plain text
-      const codeMatch = response.match(/```(?:javascript|js|jsx|html|css)?\n?([\s\S]*?)```/);
-      if (codeMatch) {
-        setFiles(prev => ({
-          ...prev,
-          [selectedFile]: { content: codeMatch[1].trim() }
-        }));
-      }
+    } catch (error) {
+      console.error("Error processing generated code:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white">
       <Header />
-      
-      <div className="flex-1 flex">
+      {isLoading && (
+        <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="text-white text-lg">Generating project...</div>
+        </div>
+      )}
+      <div className="flex-1 flex overflow-hidden">
         <PanelGroup direction="horizontal">
-          {/* Chat Panel */}
-          <Panel defaultSize={25} minSize={20} maxSize={35}>
+          <Panel defaultSize={25} minSize={20}>
             <Chat onCodeGenerated={handleCodeGenerated} />
           </Panel>
-          
-          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
-          
-          {/* File Tree Panel */}
-          <Panel defaultSize={20} minSize={15} maxSize={25}>
-            <FileTree 
+          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-blue-600" />
+          <Panel defaultSize={20} minSize={15}>
+            <FileTree
               onFileSelect={handleFileSelect}
               selectedFile={selectedFile}
               files={files}
             />
           </Panel>
-          
-          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
-          
-          {/* Main Content Panel */}
-          <Panel defaultSize={55}>
+          <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-blue-600" />
+          <Panel>
             <PanelGroup direction="vertical">
-              {/* Code Editor Panel */}
               <Panel defaultSize={70} minSize={30}>
                 <CodeEditor
-                  code={files[selectedFile]?.content || ''}
+                  code={files[selectedFile]?.content || ""}
                   onChange={handleCodeChange}
                   serverUrl={serverUrl}
                   isServerRunning={isServerRunning}
@@ -293,10 +297,7 @@ server.listen(PORT, () => {
                   files={files}
                 />
               </Panel>
-              
-              <PanelResizeHandle className="h-1 bg-gray-700 hover:bg-gray-600 transition-colors" />
-              
-              {/* Terminal Panel */}
+              <PanelResizeHandle className="h-1 bg-gray-700 hover:bg-blue-600" />
               <Panel defaultSize={30} minSize={20}>
                 <Terminal
                   webcontainerInstance={webcontainerInstanceRef.current}

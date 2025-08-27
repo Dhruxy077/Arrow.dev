@@ -1,159 +1,233 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronRight, 
-  ChevronDown, 
-  File, 
-  Folder, 
+import React, { useState, useEffect } from "react";
+import {
+  ChevronRight,
+  ChevronDown,
+  File,
+  Folder,
   FolderOpen,
-  Search
-} from 'lucide-react';
+} from "lucide-react";
+
+const getFileIcon = (fileName) => {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+  const iconClass = "w-4 h-4";
+
+  switch (extension) {
+    case "jsx":
+    case "tsx":
+      return <File className={`${iconClass} text-blue-400`} />;
+    case "js":
+    case "ts":
+      return <File className={`${iconClass} text-yellow-400`} />;
+    case "css":
+    case "scss":
+    case "sass":
+      return <File className={`${iconClass} text-pink-400`} />;
+    case "html":
+      return <File className={`${iconClass} text-orange-400`} />;
+    case "json":
+      return <File className={`${iconClass} text-green-400`} />;
+    case "md":
+      return <File className={`${iconClass} text-blue-300`} />;
+    case "png":
+    case "jpg":
+    case "jpeg":
+    case "gif":
+    case "svg":
+      return <File className={`${iconClass} text-purple-400`} />;
+    default:
+      return <File className={`${iconClass} text-gray-400`} />;
+  }
+};
+
+const buildFileTree = (files) => {
+  const root = { name: "root", type: "folder", children: {}, path: "" };
+
+  if (!files || typeof files !== "object") {
+    return root;
+  }
+
+  Object.keys(files).forEach((filePath) => {
+    // Skip empty paths
+    if (!filePath || filePath.trim() === "") return;
+
+    let current = root;
+    const pathParts = filePath.split("/").filter((part) => part.trim() !== "");
+
+    pathParts.forEach((part, index) => {
+      if (!current.children) {
+        current.children = {};
+      }
+
+      const isFile = index === pathParts.length - 1;
+      const currentPath = pathParts.slice(0, index + 1).join("/");
+
+      if (!current.children[part]) {
+        current.children[part] = {
+          name: part,
+          type: isFile ? "file" : "folder",
+          path: isFile ? filePath : currentPath,
+          children: isFile ? undefined : {},
+          fullPath: filePath, // Keep original full path for files
+        };
+      }
+      current = current.children[part];
+    });
+  });
+
+  return root;
+};
 
 const FileTree = ({ onFileSelect, selectedFile, files = {} }) => {
-  const [expandedFolders, setExpandedFolders] = useState(new Set(['root', 'client', 'server']));
-  const [searchTerm, setSearchTerm] = useState('');
-  const [fileStructure, setFileStructure] = useState(null);
+  const [tree, setTree] = useState(() => buildFileTree(files));
+  const [expandedFolders, setExpandedFolders] = useState(new Set(["root"]));
 
-  // Convert files object to tree structure
   useEffect(() => {
-    if (Object.keys(files).length > 0) {
-      const structure = {
-        name: 'project',
-        type: 'folder',
-        children: Object.keys(files).map(fileName => ({
-          name: fileName,
-          type: 'file',
-          path: fileName
-        }))
-      };
-      setFileStructure(structure);
-      setExpandedFolders(new Set(['project']));
-    } else {
-      // Default structure when no files
-      setFileStructure({
-        name: 'project',
-        type: 'folder',
-        children: [
-          { name: 'index.html', type: 'file', path: 'index.html' },
-          { name: 'style.css', type: 'file', path: 'style.css' },
-          { name: 'script.js', type: 'file', path: 'script.js' }
-        ]
+    const newTree = buildFileTree(files);
+    setTree(newTree);
+
+    // Auto-expand common directories
+    const commonDirs = ["root", "src", "public", "components"];
+    const autoExpand = new Set();
+
+    // Add root
+    autoExpand.add("root");
+
+    // Auto-expand first level directories
+    if (newTree.children) {
+      Object.keys(newTree.children).forEach((key) => {
+        if (newTree.children[key].type === "folder") {
+          autoExpand.add(key);
+          // Also expand common subdirectories
+          if (commonDirs.includes(key) || key === "src") {
+            const childPath = key;
+            autoExpand.add(childPath);
+
+            // Auto-expand src subdirectories
+            if (newTree.children[key].children) {
+              Object.keys(newTree.children[key].children).forEach((subKey) => {
+                if (newTree.children[key].children[subKey].type === "folder") {
+                  autoExpand.add(`${childPath}/${subKey}`);
+                }
+              });
+            }
+          }
+        }
       });
-      setExpandedFolders(new Set(['project']));
     }
+
+    setExpandedFolders(autoExpand);
   }, [files]);
 
   const toggleFolder = (folderPath) => {
-    const newExpanded = new Set(expandedFolders);
-    if (newExpanded.has(folderPath)) {
-      newExpanded.delete(folderPath);
-    } else {
-      newExpanded.add(folderPath);
-    }
-    setExpandedFolders(newExpanded);
+    setExpandedFolders((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderPath)) {
+        newSet.delete(folderPath);
+      } else {
+        newSet.add(folderPath);
+      }
+      return newSet;
+    });
   };
 
-  const getFileIcon = (fileName) => {
-    const ext = fileName.split('.').pop();
-    switch (ext) {
-      case 'js':
-      case 'jsx':
-        return '🟨';
-      case 'ts':
-      case 'tsx':
-        return '🔷';
-      case 'json':
-        return '🔧';
-      case 'css':
-        return '🎨';
-      case 'html':
-        return '🌐';
-      case 'md':
-        return '📝';
-      case 'env':
-        return '🔐';
-      case 'py':
-        return '🐍';
-      case 'java':
-        return '☕';
-      case 'cpp':
-      case 'c':
-        return '⚡';
-      default:
-        return '📄';
-    }
-  };
+  const renderNode = (node, currentPath = "", depth = 0) => {
+    const nodePath = currentPath ? `${currentPath}/${node.name}` : node.name;
 
-  const renderFileTree = (node, path = '', level = 0) => {
-    const currentPath = path ? `${path}/${node.name}` : node.name;
-    const isExpanded = expandedFolders.has(currentPath);
-    
-    if (node.type === 'folder') {
+    if (node.type === "folder") {
+      const isExpanded = expandedFolders.has(nodePath);
+      const hasChildren =
+        node.children && Object.keys(node.children).length > 0;
+
       return (
-        <div key={currentPath}>
+        <div key={nodePath}>
           <div
-            className="flex items-center gap-2 py-1 px-2 hover:bg-gray-700 cursor-pointer text-gray-300"
-            style={{ paddingLeft: `${level * 16 + 8}px` }}
-            onClick={() => toggleFolder(currentPath)}
+            className="flex items-center gap-2 py-1 px-2 hover:bg-gray-700 cursor-pointer text-gray-300 select-none"
+            onClick={() => toggleFolder(nodePath)}
+            style={{ paddingLeft: `${depth * 16 + 8}px` }}
           >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
+            {hasChildren && (
+              <>
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                )}
+              </>
             )}
+            {!hasChildren && <div className="w-4 h-4 flex-shrink-0" />}
+
             {isExpanded ? (
-              <FolderOpen className="w-4 h-4 text-blue-400" />
+              <FolderOpen className="w-4 h-4 text-blue-400 flex-shrink-0" />
             ) : (
-              <Folder className="w-4 h-4 text-blue-400" />
+              <Folder className="w-4 h-4 text-blue-400 flex-shrink-0" />
             )}
-            <span className="text-sm">{node.name}</span>
+            <span className="text-sm truncate">{node.name}</span>
           </div>
-          {isExpanded && node.children && (
+
+          {isExpanded && hasChildren && (
             <div>
-              {node.children.map(child => renderFileTree(child, currentPath, level + 1))}
+              {Object.values(node.children)
+                .sort((a, b) => {
+                  // Folders first, then files, then alphabetical
+                  if (a.type !== b.type) {
+                    return a.type === "folder" ? -1 : 1;
+                  }
+                  return a.name.localeCompare(b.name);
+                })
+                .map((child) => renderNode(child, nodePath, depth + 1))}
             </div>
           )}
         </div>
       );
-    } else {
-      return (
-        <div
-          key={currentPath}
-          className={`flex items-center gap-2 py-1 px-2 hover:bg-gray-700 cursor-pointer text-gray-300 ${
-            selectedFile === node.path ? 'bg-gray-700' : ''
-          }`}
-          style={{ paddingLeft: `${level * 16 + 24}px` }}
-          onClick={() => onFileSelect && onFileSelect(node.path)}
-        >
-          <File className="w-4 h-4 text-gray-400" />
-          <span className="text-sm flex items-center gap-1">
-            <span>{getFileIcon(node.name)}</span>
-            {node.name}
-          </span>
-        </div>
-      );
     }
+
+    // It's a file
+    const isSelected =
+      selectedFile === node.fullPath || selectedFile === node.path;
+
+    return (
+      <div
+        key={node.fullPath || node.path}
+        className={`flex items-center gap-2 py-1 px-2 hover:bg-gray-700 cursor-pointer text-gray-300 select-none ${
+          isSelected ? "bg-gray-600" : ""
+        }`}
+        style={{ paddingLeft: `${depth * 16 + 32}px` }}
+        onClick={() => onFileSelect(node.fullPath || node.path)}
+        title={node.fullPath || node.path}
+      >
+        {getFileIcon(node.name)}
+        <span className="text-sm truncate">{node.name}</span>
+      </div>
+    );
   };
+
+  const hasFiles = tree.children && Object.keys(tree.children).length > 0;
 
   return (
     <div className="bg-gray-800 h-full flex flex-col">
-      <div className="p-3 border-b border-gray-700">
-        <div className="flex items-center gap-2 mb-2">
-          <File className="w-4 h-4 text-gray-400" />
-          <span className="text-white font-medium text-sm">Files</span>
-        </div>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-700 text-white text-sm pl-8 pr-3 py-1 rounded border-none outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
+      <div className="p-3 border-b border-gray-700 text-white text-sm font-medium">
+        Files
       </div>
       <div className="flex-1 overflow-y-auto">
-        {fileStructure && renderFileTree(fileStructure)}
+        {hasFiles ? (
+          <div className="py-1">
+            {Object.values(tree.children)
+              .sort((a, b) => {
+                if (a.type !== b.type) {
+                  return a.type === "folder" ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name);
+              })
+              .map((child) => renderNode(child, "", 0))}
+          </div>
+        ) : (
+          <div className="p-4 text-sm text-gray-400 text-center">
+            <div className="mb-2">No files yet</div>
+            <div className="text-xs text-gray-500">
+              Ask the AI to build something!
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
