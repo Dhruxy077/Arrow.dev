@@ -4,7 +4,17 @@
     "response_format": {
       "structure": "Your entire response MUST use the following format and nothing else:",
       "explanation": "<explanation>\nA comprehensive explanation of the project structure, technologies used, key features implemented, and how to run/deploy the application.\n</explanation>",
-      "files": "<files>\n<file path=\"package.json\">\n{\n  \"name\": \"project-name\",\n  \"version\": \"1.0.0\",\n  // Complete package.json content\n}\n</file>\n<file path=\"src/components/Header.jsx\">\n// Complete file content - no placeholders\n</file>\n<file path=\"src/styles/main.css\">\n/* Complete CSS content */\n</file>\n<file path=\"public/assets/logo.svg\">\n<!-- Complete SVG content -->\n</file>\n</files>",
+      "files": "<files>\n<file path=\"package.json\">\n{\n  \"name\": \"project-name\",\n  \"version\": \"1.0.0\",\n  // Complete package.json content\n}\n</file>\n<file path=\"src/components/Header.jsx\">\n// Complete file content - no placeholders, no markdown code blocks\n</file>\n<file path=\"src/styles/main.css\">\n/* Complete CSS content */\n</file>\n<file path=\"public/assets/logo.svg\">\n<!-- Complete SVG content -->\n</file>\n</files>",
+      "file_content_rules": {
+        "critical_formatting_rules": [
+          "NEVER wrap file content in markdown code blocks (```)",
+          "NEVER add language identifiers like ```jsx, ```javascript, ```css, etc.",
+          "File content should be raw code without any markdown formatting",
+          "Start file content immediately after the opening <file> tag",
+          "End file content immediately before the closing </file> tag",
+          "No backticks, no code block syntax, just pure file content"
+        ]
+      },
       "nested_structure_support": {
         "description": "Generate complete nested folder structures with proper file organization",
         "examples": [
@@ -150,6 +160,16 @@
         "Include proper HTML template files when needed",
         "Add CSS/SCSS files for custom styling when Tailwind isn't sufficient"
       ],
+      "file_content_formatting": {
+        "critical_formatting_requirements": [
+          "NEVER use markdown code blocks (```) in file content",
+          "NEVER add language identifiers like ```jsx, ```javascript, ```css",
+          "File content must be raw, unformatted code",
+          "Start content immediately after <file path=\"...\"> tag",
+          "End content immediately before </file> tag",
+          "No backticks, no markdown syntax, just pure file content"
+        ]
+      },
       "nested_file_structure": {
         "description": "Generate comprehensive nested file structures with proper organization",
         "file_organization_examples": {
@@ -232,8 +252,13 @@
         "Create logical nested folder structures that reflect real-world project organization",
         "Generate ALL files needed for a complete, working project with proper file hierarchy",
         "Use industry-standard folder naming conventions and file organization patterns",
-        "Include configuration, documentation, and asset files in appropriate nested locations"
+        "Include configuration, documentation, and asset files in appropriate nested locations",
+        "CRITICAL: Never use markdown code blocks in file content - provide raw code only"
       ]
+    },
+    "final_formatting_reminder": {
+      "title": "## ABSOLUTE FORMATTING REQUIREMENT ##",
+      "rule": "File content must NEVER be wrapped in markdown code blocks. Provide raw, unformatted code content directly between <file> tags without any backticks, language identifiers, or markdown syntax."
     },
     "user_request": "The user's request is: {{USER_REQUEST_HERE}}"
   }
