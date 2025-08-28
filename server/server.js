@@ -110,6 +110,7 @@ function parseAIResponse(responseText) {
 // Main processing endpoint - FIXED
 app.post("/api/process-request", async (req, res) => {
   const { userInput } = req.body;
+  console.log(`Request Received: ${userInput}`);
 
   if (!userInput) {
     return res.status(400).json({
