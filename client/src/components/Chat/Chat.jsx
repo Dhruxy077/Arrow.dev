@@ -8,6 +8,7 @@ import {
   BotMessageSquare,
 } from "lucide-react";
 import { processRequest } from "../../services/api";
+import ReactMarkdown from "react-markdown";
 
 const Chat = ({ onCodeGenerated }) => {
   const [messages, setMessages] = useState([
@@ -102,43 +103,6 @@ const Chat = ({ onCodeGenerated }) => {
     }
   };
 
-  const formatMessage = (content) => {
-    // Simple code block detection and formatting
-    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        parts.push({
-          type: "text",
-          content: content.slice(lastIndex, match.index),
-        });
-      }
-
-      // Add code block
-      parts.push({
-        type: "code",
-        language: match[1] || "javascript",
-        content: match[2].trim(),
-      });
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text
-    if (lastIndex < content.length) {
-      parts.push({
-        type: "text",
-        content: content.slice(lastIndex),
-      });
-    }
-
-    return parts.length > 0 ? parts : [{ type: "text", content }];
-  };
-
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden border-r border-border">
       {/* Chat Header */}
@@ -163,36 +127,97 @@ const Chat = ({ onCodeGenerated }) => {
             )}
 
             <div
-              className={` rounded-lg p-3 ${
-                message.type === "user"
+              className={`rounded-lg p-3 max-w-[80%] ${
+                message.type !== "user"
                   ? "bg-primary text-primary-foreground"
                   : "bg-gray-600 text-muted-foreground"
               }`}
             >
-              <div className="space-y-2">
-                {formatMessage(message.content).map((part, index) => (
-                  <div key={index}>
-                    {part.type === "text" ? (
-                      <p className="text-sm whitespace-pre-wrap">
-                        {part.content}
-                      </p>
-                    ) : (
-                      <div className="bg-background rounded p-2 mt-2">
-                        <div className="text-xs text-muted-foreground mb-1">
-                          {part.language}
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown
+                  components={{
+                    // Custom code block styling
+                    code({ inline, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || "");
+                      return !inline && match ? (
+                        <div className="bg-background rounded p-2 mt-2 mb-2">
+                          <div className="text-sm text-muted-foreground mb-1">
+                            {match[1]}
+                          </div>
+                          <pre className="text-sm text-green-400 overflow-x-auto">
+                            <code {...props}>{children}</code>
+                          </pre>
                         </div>
-                        <pre className="text-xs text-green-400 overflow-x-auto">
-                          <code>{part.content}</code>
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      ) : (
+                        <code
+                          className="bg-background text-foreground px-1 py-0.5 rounded text-sm"
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    },
+                    // Custom paragraph styling
+                    p({ children }) {
+                      return (
+                        <p className="text-base mb-2 last:mb-0 leading-relaxed">
+                          {children}
+                        </p>
+                      );
+                    },
+                    // Custom list styling
+                    ul({ children }) {
+                      return (
+                        <ul className="text-base space-y-1 ml-4">{children}</ul>
+                      );
+                    },
+                    ol({ children }) {
+                      return (
+                        <ol className="text-base space-y-1 ml-4">{children}</ol>
+                      );
+                    },
+                    li({ children }) {
+                      return <li className="text-base">{children}</li>;
+                    },
+                    // Custom heading styling
+                    h1({ children }) {
+                      return (
+                        <h1 className="text-lg font-semibold mb-2">
+                          {children}
+                        </h1>
+                      );
+                    },
+                    h2({ children }) {
+                      return (
+                        <h2 className="text-base font-semibold mb-1">
+                          {children}
+                        </h2>
+                      );
+                    },
+                    h3({ children }) {
+                      return (
+                        <h3 className="text-base font-medium mb-1">
+                          {children}
+                        </h3>
+                      );
+                    },
+                    // Custom blockquote styling
+                    blockquote({ children }) {
+                      return (
+                        <blockquote className="border-l-2 border-muted pl-3 italic text-base">
+                          {children}
+                        </blockquote>
+                      );
+                    },
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
               </div>
             </div>
 
             {message.type === "user" && (
-              <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+              <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center outline-2">
                 <User className="w-4 h-4 text-muted-foreground" />
               </div>
             )}
