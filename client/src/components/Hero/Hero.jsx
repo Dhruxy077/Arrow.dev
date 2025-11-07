@@ -1,79 +1,66 @@
+// src/components/Hero/Hero.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { processRequest } from "../../services/api";
-import "./Hero.css";
-import { ArrowRight, CircleSlash, Link } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 const Hero = () => {
-  const [userInput, setuserInput] = useState("");
+  const [userInput, setUserInput] = useState("");
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleInputChange = (e) => {
-    setuserInput(e.target.value);
+    setUserInput(e.target.value);
+    if (error) setError(null);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handlesubmit();
+      handleSubmit();
     }
   };
 
-  const handlesubmit = async () => {
-    if (!userInput || userInput.trim() === "") return;
-    
+  const handleSubmit = async () => {
+    if (!userInput?.trim()) return;
     setLoading(true);
     setError(null);
-
-    try {
-      const response = await processRequest(userInput);
-      // Navigate to builder with both user input and AI response
-      navigate("/builder", { 
-        state: { 
-          userInput: userInput,
-          aiResponse: response.result 
-        } 
-      });
-    } catch (error) {
-      console.error("error submitting the message:", error.message);
-      setError(error.message || "Failed to process the request.");
-    } finally {
-      setLoading(false);
-    }
+    navigate("/builder", { state: { initialPrompt: userInput.trim() } });
+    setLoading(false);
   };
+
   return (
     <div className="flex flex-col items-center text-center gap-3">
-      <h1 className="text-gray-100 text-5xl font-bold">
+      <h1 className="text-gray-100 text-4xl md:text-5xl font-bold">
         What do you want to build today?
       </h1>
       <h3 className="text-lg text-gray-300">Prompt, Create, Run and Edit</h3>
 
-      <div className="w-xl flex items-center p-3 rounded-lg outline-amber-50 outline-2 rounded-e-3xl rounded-l-3xl ">
+      <div className="w-full max-w-2xl flex flex-col md:flex-row items-center p-3 rounded-lg bg-gray-800/50 backdrop-blur-sm border border-gray-700">
         <textarea
-          className="max-40 w-full h-32 overflow-y-auto overflow-x-hidden break-words bg-transparent text-white outline-none placeholder-gray-400 resize-none p-2 box-border rounded-md scrollbar-hide"
-          placeholder="How can Arrow help you today?"
+          className="w-full h-32 md:h-24 bg-transparent text-white placeholder-gray-400 outline-none resize-none p-2 rounded-md"
+          placeholder="How can Arrow help you today? (e.g., 'Create a todo app with React and Tailwind')"
           value={userInput}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-        ></textarea>
-        <span className=" items-center justify-center pb-18">
-          <button
-            className="bg-amber-50 rounded-xl size-10 flex items-center justify-center ml-0 mr-1 mt-0 mb-1"
-            onClick={handlesubmit}
-            disabled={loading || !userInput.trim()}
-          >
-            {loading ? (
-              <CircleSlash size={20} color="black" strokeWidth={2} />
-            ) : (
-              <ArrowRight size={20} color="black" strokeWidth={2} />
-            )}
-          </button>
-        </span>
+          disabled={loading}
+        />
+        <button
+          className="mt-3 md:mt-0 md:ml-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl w-12 h-12 flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50"
+          onClick={handleSubmit}
+          disabled={loading || !userInput.trim()}
+          aria-label="Submit prompt"
+        >
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-white" />
+          ) : (
+            <ArrowRight className="w-5 h-5 text-white" />
+          )}
+        </button>
       </div>
-      {error && <p className="text-red-500 text-center">{error}</p>}
+      {error && <p className="text-red-500 text-center mt-2">{error}</p>}
     </div>
   );
 };
+
 export default Hero;
