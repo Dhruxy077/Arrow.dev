@@ -58,9 +58,10 @@ const Builder = () => {
 
   // --- Local UI State ---
   const [selectedFile, setSelectedFile] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // For chat responses
-  const [isImporting, setIsImporting] = useState(false); // For project build
+  const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [generatingStage, setGeneratingStage] = useState(0);
+  const [unsavedFiles, setUnsavedFiles] = useState(new Set());
 
   // --- WebContainer Hook ---
   const {
@@ -371,8 +372,20 @@ const Builder = () => {
             generatedCode: { ...chat.generatedCode, files: newFiles },
           };
         });
+
+        setUnsavedFiles((prev) => {
+          const updated = new Set(prev);
+          updated.add(fileName);
+          return updated;
+        });
+
         try {
           await container.fs.writeFile(fileName, value);
+          setUnsavedFiles((prev) => {
+            const updated = new Set(prev);
+            updated.delete(fileName);
+            return updated;
+          });
         } catch (error) {
           console.error("Error writing file to WebContainer:", error);
         }
@@ -473,6 +486,7 @@ const Builder = () => {
               fileContent={files[selectedFile] || ""}
               fileName={selectedFile}
               onChange={handleCodeChange}
+              hasUnsavedChanges={unsavedFiles.has(selectedFile)}
             />
           </Panel>
         </PanelGroup>
