@@ -1,6 +1,5 @@
 import React from "react";
-import { Button } from "../../components/ui/Button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -8,7 +7,7 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -51,15 +50,20 @@ class ErrorBoundary extends React.Component {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button onClick={this.handleReset} variant="primary">
-                Try Again
-              </Button>
-              <Button
-                onClick={() => (window.location.href = "/")}
-                variant="secondary"
+              <button
+                onClick={this.handleReset}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </button>
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="flex items-center gap-2 px-4 py-2 bg-neutral-700 text-white rounded-lg hover:bg-neutral-600 transition-colors"
+              >
+                <Home className="w-4 h-4" />
                 Go Home
-              </Button>
+              </button>
             </div>
           </div>
         </div>

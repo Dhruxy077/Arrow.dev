@@ -45,6 +45,8 @@ function parseProjectXML(rawText) {
 
   const files = {};
   const updates = [];
+  const commands = [];
+  let explanation = "";
 
   // 1. Find all NEW files
   xmlDoc.querySelectorAll("project > file").forEach((fileNode) => {
@@ -76,7 +78,21 @@ function parseProjectXML(rawText) {
     }
   });
 
-  return { projectName, files, updates };
+  // 3. Find all COMMANDS
+  xmlDoc.querySelectorAll("project > command").forEach((commandNode) => {
+    const command = commandNode.textContent?.trim() || "";
+    if (command) {
+      commands.push(command);
+    }
+  });
+
+  // 4. Find EXPLANATION
+  const explanationNode = xmlDoc.querySelector("project > explanation");
+  if (explanationNode) {
+    explanation = explanationNode.textContent?.trim() || "";
+  }
+
+  return { projectName, files, updates, commands, explanation };
 }
 
 /**
@@ -85,21 +101,33 @@ function parseProjectXML(rawText) {
  */
 export function parseInitialGeneration(rawText) {
   try {
-    const { projectName, files } = parseProjectXML(rawText);
+    const { projectName, files, commands, explanation } = parseProjectXML(rawText);
 
     if (Object.keys(files).length === 0) {
       console.error("CustomTagParser: No files found in response.", rawText);
       throw new Error("Could not parse any files from the AI response.");
     }
 
-    return { projectName, files, error: null };
+    return { 
+      projectName, 
+      files, 
+      commands: commands || [],
+      explanation: explanation || "",
+      error: null 
+    };
   } catch (error) {
     console.error(
       "Failed to parse initial generation response:",
       error,
       rawText
     );
-    return { projectName: "Error", files: {}, error: error.message };
+    return { 
+      projectName: "Error", 
+      files: {}, 
+      commands: [],
+      explanation: "",
+      error: error.message 
+    };
   }
 }
 
@@ -109,7 +137,7 @@ export function parseInitialGeneration(rawText) {
  */
 export function parseModification(rawText) {
   try {
-    const { projectName, files, updates } = parseProjectXML(rawText);
+    const { projectName, files, updates, commands, explanation } = parseProjectXML(rawText);
 
     if (updates.length === 0 && Object.keys(files).length === 0) {
       throw new Error(
@@ -118,13 +146,22 @@ export function parseModification(rawText) {
     }
 
     // 'files' are new files, 'updates' are diffs
-    return { projectName, updates, newFiles: files, error: null };
+    return { 
+      projectName, 
+      updates, 
+      newFiles: files,
+      commands: commands || [],
+      explanation: explanation || "",
+      error: null 
+    };
   } catch (error) {
     console.error("Failed to parse modification response:", error, rawText);
     return {
       projectName: "Error",
       updates: [],
       newFiles: {},
+      commands: [],
+      explanation: "",
       error: error.message,
     };
   }

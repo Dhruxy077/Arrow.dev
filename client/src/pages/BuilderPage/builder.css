@@ -1,0 +1,85 @@
+.builder-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #0f1117;
+  color: white;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #0f1117;
+  border-bottom: 1px solid #1f2937;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  height: calc(100vh - 3.5rem);
+}
+
+/* Panel Styles */
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #0f1117;
+}
+
+.panel-left {
+  border-right: 1px solid #1f2937;
+}
+
+.panel-right {
+  border-left: 1px solid #1f2937;
+}
+
+.panel-resize-handle {
+  width: 4px;
+  background-color: #1f2937;
+  transition: background-color 0.2s;
+}
+
+.panel-resize-handle:hover {
+  background-color: #3b82f6;
+}
+
+/* Component Containers */
+.component-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.code-editor {
+  flex: 1;
+  background-color: #0f1117;
+}
+
+.terminal-wrapper {
+  min-height: 150px;
+  border-top: 1px solid #1f2937;
+  background-color: #0f1117;
+}
+
+.preview-wrapper {
+  background-color: #0f1117;
+  height: 100%;
+}
+
+/* Fix z-index issues */
+.monaco-editor {
+  z-index: 1;
+}
+
+/* Prevent content from appearing behind header */
+.content-area {
+  position: relative;
+  z-index: 1;
+}

@@ -1,37 +1,36 @@
+// client/src/components/WebContainer/TerminalInstance.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Terminal } from "xterm";
 import "xterm/css/xterm.css";
 import { FitAddon } from "xterm-addon-fit";
 import { WebLinksAddon } from "xterm-addon-web-links";
-import { SearchAddon } from "xterm-addon-search";
 
 const TerminalInstance = ({
   webcontainerInstance,
   isContainerReady,
   terminalId,
+  cwd = "~/project",
 }) => {
   const terminalRef = useRef(null);
   const terminalInstanceRef = useRef(null);
   const shellProcessRef = useRef(null);
-  const cleanupRef = useRef(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const resizeObserverRef = useRef(null);
+  const isInitializedRef = useRef(false);
   const commandHistoryRef = useRef([]);
   const historyIndexRef = useRef(-1);
+  const currentLineRef = useRef("");
 
   useEffect(() => {
     if (!webcontainerInstance || !terminalRef.current || !isContainerReady) {
       return;
     }
 
-    // Prevent multiple initializations
-    if (isInitialized) return;
-    setIsInitialized(true);
+    if (isInitializedRef.current) return;
 
     const initTerminal = async () => {
       try {
         const fitAddon = new FitAddon();
         const webLinksAddon = new WebLinksAddon();
-        const searchAddon = new SearchAddon();
 
         const terminal = new Terminal({
           convertEol: true,
@@ -63,12 +62,11 @@ const TerminalInstance = ({
             brightWhite: "#e5e5e5",
           },
           allowTransparency: true,
-          scrollback: 1000, // Limit buffer size for performance
+          scrollback: 1000,
         });
 
         terminal.loadAddon(fitAddon);
         terminal.loadAddon(webLinksAddon);
-        terminal.loadAddon(searchAddon);
         terminal.open(terminalRef.current);
         terminal.focus();
         terminalInstanceRef.current = terminal;
@@ -78,15 +76,16 @@ const TerminalInstance = ({
 
         // Handle window resize
         const resizeObserver = new ResizeObserver(() => {
-          fitAddon.fit();
+          if (terminal.element) {
+            fitAddon.fit();
+          }
         });
+        resizeObserver.observe(terminalRef.current);
+        resizeObserverRef.current = resizeObserver;
 
-        if (terminalRef.current) {
-          resizeObserver.observe(terminalRef.current);
-        }
-
-        terminal.writeln("\x1b[1;36mWebContainer Terminal Ready\x1b[0m");
-        terminal.write("\x1b[1;32m$ \x1b[0m");
+        // Write welcome message and prompt
+        terminal.writeln("\x1b[1;36mTerminal Ready\x1b[0m");
+        terminal.write(`\r\n${cwd} \x1b[1;32m> \x1b[0m`);
 
         // Start shell process
         const shellProcess = await webcontainerInstance.spawn("jsh", {
@@ -102,87 +101,133 @@ const TerminalInstance = ({
         shellProcess.output.pipeTo(
           new WritableStream({
             write(data) {
-              terminal.write(data);
+              if (terminal.element) {
+                terminal.write(data);
+              }
             },
           })
         );
 
-        // Handle terminal input
+        // Handle terminal input with command history
         const input = shellProcess.input.getWriter();
+        let currentCommand = "";
+        let historyIndex = -1;
+        let savedLine = "";
+
         const dataListener = terminal.onData((data) => {
-          // Handle command history navigation
+          if (!terminal.element) return;
+
+          // Handle Ctrl+C (interrupt)
+          if (data === "\x03") {
+            currentCommand = "";
+            historyIndex = -1;
+            savedLine = "";
+            input.write(data);
+            return;
+          }
+
+          // Handle Ctrl+L (clear screen)
+          if (data === "\x0c") {
+            terminal.clear();
+            input.write(data);
+            return;
+          }
+
+          // Handle Ctrl+U (clear line)
+          if (data === "\x15") {
+            currentCommand = "";
+            historyIndex = -1;
+            input.write(data);
+            return;
+          }
+
+          // Handle arrow keys for command history
           if (data === "\x1b[A") {
-            // Up arrow
+            // Up arrow - previous command
             if (commandHistoryRef.current.length > 0) {
-              if (historyIndexRef.current < 0) {
-                historyIndexRef.current = commandHistoryRef.current.length - 1;
-              } else if (historyIndexRef.current > 0) {
-                historyIndexRef.current--;
+              if (historyIndex === -1) {
+                // Save current line if at end of history
+                savedLine = currentCommand;
               }
-
-              // Get current line content (after $ prompt)
-              const buffer = terminal.buffer.active;
-              const currentLine = buffer.getLine(buffer.cursorY).toString();
-              const promptEnd = currentLine.indexOf("$") + 2;
-              const currentCommand = currentLine.substring(promptEnd);
-
-              // Clear current line and write history command
-              terminal.write(
-                "\r\x1b[K\x1b[1;32m$ \x1b[0m" +
-                  commandHistoryRef.current[historyIndexRef.current]
-              );
+              historyIndex = Math.min(commandHistoryRef.current.length - 1, historyIndex + 1);
+              const command = commandHistoryRef.current[commandHistoryRef.current.length - 1 - historyIndex];
+              currentCommand = command;
+              
+              // Clear current line and write command
+              terminal.write("\r\x1b[K"); // Clear line
+              terminal.write(`${cwd} \x1b[1;32m> \x1b[0m${command}`);
             }
             return;
           } else if (data === "\x1b[B") {
-            // Down arrow
-            if (commandHistoryRef.current.length > 0) {
-              if (
-                historyIndexRef.current <
-                commandHistoryRef.current.length - 1
-              ) {
-                historyIndexRef.current++;
-                const command =
-                  commandHistoryRef.current[historyIndexRef.current];
-                terminal.write("\r\x1b[K\x1b[1;32m$ \x1b[0m" + command);
-              } else {
-                historyIndexRef.current = commandHistoryRef.current.length;
-                terminal.write("\r\x1b[K\x1b[1;32m$ \x1b[0m");
-              }
+            // Down arrow - next command
+            if (historyIndex > 0) {
+              historyIndex = historyIndex - 1;
+              const command = commandHistoryRef.current[commandHistoryRef.current.length - 1 - historyIndex];
+              currentCommand = command;
+              
+              // Clear current line and write command
+              terminal.write("\r\x1b[K"); // Clear line
+              terminal.write(`${cwd} \x1b[1;32m> \x1b[0m${command}`);
+            } else if (historyIndex === 0) {
+              // Restore original line
+              currentCommand = savedLine;
+              historyIndex = -1;
+              savedLine = "";
+              
+              // Clear current line and write saved line
+              terminal.write("\r\x1b[K"); // Clear line
+              terminal.write(`${cwd} \x1b[1;32m> \x1b[0m${savedLine}`);
             }
+            return;
+          } else if (data === "\r") {
+            // Enter key - execute command
+            if (currentCommand.trim()) {
+              // Add to history (avoid duplicates)
+              const trimmed = currentCommand.trim();
+              commandHistoryRef.current = commandHistoryRef.current.filter(c => c !== trimmed);
+              commandHistoryRef.current.push(trimmed);
+              // Keep only last 100 commands
+              if (commandHistoryRef.current.length > 100) {
+                commandHistoryRef.current.shift();
+              }
+              historyIndex = -1;
+              savedLine = "";
+            }
+            currentCommand = "";
+            input.write(data);
+            return;
+          } else if (data === "\x7f" || data === "\b") {
+            // Backspace
+            if (currentCommand.length > 0) {
+              currentCommand = currentCommand.slice(0, -1);
+            }
+            historyIndex = -1; // Reset history when typing
+            input.write(data);
+            return;
+          } else if (data.length === 1 && data >= " " && data <= "~") {
+            // Printable characters
+            currentCommand += data;
+            historyIndex = -1; // Reset history when typing
+            input.write(data);
             return;
           }
 
-          // Reset history index on new command input
-          if (data !== "\r" && data !== "\n") {
-            historyIndexRef.current = commandHistoryRef.current.length;
-          }
-
-          // Handle Enter key - add to history
-          if (data === "\r" || data === "\n") {
-            const buffer = terminal.buffer.active;
-            const currentLine = buffer.getLine(buffer.cursorY - 1).toString();
-            const promptEnd = currentLine.indexOf("$") + 2;
-            const command = currentLine.substring(promptEnd).trim();
-
-            if (command) {
-              commandHistoryRef.current.push(command);
-              historyIndexRef.current = commandHistoryRef.current.length;
-            }
-          }
-
+          // Send all other data to shell
           input.write(data);
         });
 
         // Handle terminal resize
         const resizeListener = terminal.onResize(({ cols, rows }) => {
-          shellProcess.resize({ cols, rows });
+          if (shellProcessRef.current) {
+            shellProcessRef.current.resize({ cols, rows });
+          }
         });
 
-        // Store cleanup function
-        cleanupRef.current = () => {
-          dataListener.dispose();
-          resizeListener.dispose();
-          resizeObserver.disconnect();
+        // Cleanup function
+        const cleanup = () => {
+          if (dataListener) dataListener.dispose();
+          if (resizeListener) resizeListener.dispose();
+          if (resizeObserverRef.current) resizeObserverRef.current.disconnect();
           if (shellProcessRef.current) {
             shellProcessRef.current.kill();
           }
@@ -190,6 +235,10 @@ const TerminalInstance = ({
             terminalInstanceRef.current.dispose();
           }
         };
+
+        isInitializedRef.current = true;
+        // Store cleanup for unmount
+        return cleanup;
       } catch (error) {
         console.error("Error initializing terminal:", error);
         if (terminalInstanceRef.current) {
@@ -206,25 +255,60 @@ const TerminalInstance = ({
             "\x1b[1;31m===================================\r\n"
           );
         }
+        isInitializedRef.current = false;
       }
     };
 
-    initTerminal();
+    const cleanupFn = initTerminal();
 
-    // Cleanup function
     return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
+      isInitializedRef.current = false;
+      if (typeof cleanupFn === "function") {
+        cleanupFn();
       }
     };
-  }, [webcontainerInstance, isContainerReady, terminalId, isInitialized]);
+  }, [webcontainerInstance, isContainerReady, terminalId, cwd]);
+
+  // Expose terminal instance and methods via ref (for parent components)
+  useEffect(() => {
+    if (terminalInstanceRef.current && shellProcessRef.current) {
+      // Expose executeCommand method for programmatic command execution
+      if (terminalInstanceRef.current.executeCommand === undefined) {
+        terminalInstanceRef.current.executeCommand = async (command) => {
+          if (shellProcessRef.current && command) {
+            const input = shellProcessRef.current.input.getWriter();
+            // Add command to history
+            const trimmed = command.trim();
+            if (trimmed) {
+              commandHistoryRef.current = commandHistoryRef.current.filter(c => c !== trimmed);
+              commandHistoryRef.current.push(trimmed);
+              if (commandHistoryRef.current.length > 100) {
+                commandHistoryRef.current.shift();
+              }
+            }
+            // Write command and execute
+            input.write(command + "\r");
+            return shellProcessRef.current;
+          }
+        };
+      }
+    }
+  }, [terminalInstanceRef.current, shellProcessRef.current]);
+
+  // Store terminal instance reference on DOM element for external access
+  useEffect(() => {
+    if (terminalRef.current && terminalInstanceRef.current) {
+      terminalRef.current._terminalInstance = terminalInstanceRef.current;
+      terminalRef.current.setAttribute("data-terminal-id", terminalId);
+    }
+  }, [terminalInstanceRef.current, terminalId]);
 
   return (
     <div
       ref={terminalRef}
-      className="w-full h-full bg-gray-900"
+      className="w-full h-full bg-neutral-900 overflow-hidden"
       style={{ minHeight: "200px" }}
-      // --- ADD THIS ONCLICK HANDLER ---
+      data-terminal-id={terminalId}
       onClick={() => {
         if (terminalInstanceRef.current) {
           terminalInstanceRef.current.focus();

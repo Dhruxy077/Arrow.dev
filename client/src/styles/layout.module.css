@@ -1,0 +1,108 @@
+:root {
+  --header-height: 3.5rem;
+  --border-color: #1f2937;
+  --background-dark: #0f1117;
+}
+
+/* Base Layout */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--background-dark);
+  color: white;
+}
+
+/* Header */
+.headerWrapper {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: var(--background-dark);
+  border-bottom: 1px solid var(--border-color);
+  height: var(--header-height);
+}
+
+/* Main Content */
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - var(--header-height));
+}
+
+/* Panel Styles */
+.panel {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-dark);
+  height: 100%;
+}
+
+.panelLeft {
+  composes: panel;
+  border-right: 1px solid var(--border-color);
+}
+
+.panelRight {
+  composes: panel;
+  border-left: 1px solid var(--border-color);
+}
+
+/* Split Panel Customization */
+.gutter {
+  background-color: var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.gutter:hover {
+  background-color: #3b82f6;
+}
+
+.gutter.gutter-horizontal {
+  cursor: col-resize;
+  width: 4px;
+}
+
+.gutter.gutter-vertical {
+  cursor: row-resize;
+  height: 4px;
+}
+
+/* Component Containers */
+.componentContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.codeEditor {
+  composes: componentContainer;
+  background-color: var(--background-dark);
+}
+
+.terminal {
+  composes: componentContainer;
+  min-height: 150px;
+  border-top: 1px solid var(--border-color);
+}
+
+.preview {
+  composes: componentContainer;
+  background-color: var(--background-dark);
+}
+
+/* Make sure panels stay above other content */
+.resizablePanels {
+  isolation: isolate;
+}
+
+.panel {
+  z-index: 1;
+}
+
+/* Fix for shadow DOM elements */
+:global(.monaco-editor) {
+  z-index: 1;
+}

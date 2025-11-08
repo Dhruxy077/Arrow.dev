@@ -1,0 +1,60 @@
+.builder-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #0f1117;
+  color: white;
+}
+
+.header-container {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: #0f1117;
+  border-bottom: 1px solid #1f2937;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar {
+  width: 24rem;
+  border-right: 1px solid #1f2937;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #0f1117;
+}
+
+.editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-container {
+  width: 25rem;
+  border-left: 1px solid #1f2937;
+  background-color: #0f1117;
+}
+
+.panel-resize-handle {
+  width: 4px;
+  background-color: #1f2937;
+  transition: background-color 0.2s;
+}
+
+.panel-resize-handle:hover {
+  background-color: #3b82f6;
+}
+
+/* Fix for elements appearing behind header */
+.react-resizable-panels__panel {
+  overflow: auto !important;
+  contain: content;
+}

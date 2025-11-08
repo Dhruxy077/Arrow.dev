@@ -18,7 +18,7 @@ const ConfirmDialog = ({
       <div className="bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg w-96 p-6">
         <div className="flex items-start gap-4">
           {isDangerous && (
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           )}
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>

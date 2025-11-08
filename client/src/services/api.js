@@ -32,6 +32,7 @@ export const showSuccessNotification = (message) => {
  */
 export const generateRequest = async (userInput) => {
   try {
+    console.log("request going..");
     const response = await api.post(
       "/api/generate",
       { userInput },

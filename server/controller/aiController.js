@@ -12,6 +12,7 @@ const { callOpenRouter } = require("../services/openRouterService");
  * Just use the model ID from OpenRouter.
  */
 const MODEL_PRIORITY_LIST = [
+  "alibaba/tongyi-deepresearch-30b-a3b:free",
   "google/gemini-2.0-flash-exp:free",
   "minimax/minimax-m2:free", // Good at coding and agents
   "meta-llama/llama-4-maverick:free", // Meta's advanced MoE model
