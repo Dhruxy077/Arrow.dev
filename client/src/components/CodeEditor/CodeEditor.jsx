@@ -1,4 +1,12 @@
-import React, { lazy, Suspense, useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { Loader2, Maximize2, Minimize2, X } from "lucide-react";
 const MonacoEditor = lazy(() => import("@monaco-editor/react"));
 
@@ -110,10 +118,10 @@ const CommandPalette = ({ isOpen, onClose, commands }) => {
   );
 };
 
-const CodeEditor = ({ 
-  fileContent, 
-  fileName, 
-  onChange, 
+const CodeEditor = ({
+  fileContent,
+  fileName,
+  onChange,
   hasUnsavedChanges,
   files = {},
   onFileSelect,
@@ -142,7 +150,7 @@ const CodeEditor = ({
         }));
       }
     }
-  }, [selectedFile, files]);
+  }, [selectedFile, files, openTabs]);
 
   // Sync editor content with files prop
   useEffect(() => {
@@ -174,17 +182,20 @@ const CodeEditor = ({
   };
 
   // Memoize code change handler for performance
-  const handleCodeChange = useCallback((value) => {
-    if (onChange && fileName) {
-      // Update local content state
-      setEditorContent((prev) => ({
-        ...prev,
-        [fileName]: value || "",
-      }));
-      // Call parent onChange
-      onChange(value, fileName);
-    }
-  }, [fileName, onChange]);
+  const handleCodeChange = useCallback(
+    (value) => {
+      if (onChange && fileName) {
+        // Update local content state
+        setEditorContent((prev) => ({
+          ...prev,
+          [fileName]: value || "",
+        }));
+        // Call parent onChange
+        onChange(value, fileName);
+      }
+    },
+    [fileName, onChange]
+  );
 
   // Get current file content (from state or files prop)
   const getCurrentContent = () => {
@@ -334,12 +345,13 @@ const CodeEditor = ({
             onMount={(editor, monaco) => {
               editorRef.current = editor;
               monacoRef.current = monaco;
-              
+
               // Configure IntelliSense for JavaScript/TypeScript
               const compilerOptions = {
                 target: monaco.languages.typescript.ScriptTarget.ES2020,
                 allowNonTsExtensions: true,
-                moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                moduleResolution:
+                  monaco.languages.typescript.ModuleResolutionKind.NodeJs,
                 module: monaco.languages.typescript.ModuleKind.ESNext,
                 noEmit: true,
                 esModuleInterop: true,
@@ -351,11 +363,15 @@ const CodeEditor = ({
                 lib: ["ES2020", "DOM", "DOM.Iterable"],
               };
 
-              monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
-              monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-                ...compilerOptions,
-                jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
-              });
+              monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
+                compilerOptions
+              );
+              monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+                {
+                  ...compilerOptions,
+                  jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+                }
+              );
 
               // Add React types for better IntelliSense
               monaco.languages.typescript.javascriptDefaults.setExtraLibs([
@@ -376,34 +392,54 @@ const CodeEditor = ({
               ]);
 
               // Configure editor shortcuts
-              editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-                // Format document on save (save is handled by onChange)
-                editor.getAction("editor.action.formatDocument").run();
-              });
+              editor.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+                () => {
+                  // Format document on save (save is handled by onChange)
+                  editor.getAction("editor.action.formatDocument").run();
+                }
+              );
 
               // Toggle comment (Ctrl+/ or Cmd+/)
-              editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
-                editor.getAction("editor.action.commentLine").run();
-              });
+              editor.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash,
+                () => {
+                  editor.getAction("editor.action.commentLine").run();
+                }
+              );
 
               // Go to line (Ctrl+G or Cmd+G)
-              editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG, () => {
-                editor.getAction("editor.action.gotoLine").run();
-              });
+              editor.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyG,
+                () => {
+                  editor.getAction("editor.action.gotoLine").run();
+                }
+              );
 
               // Word wrap toggle
               editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyZ, () => {
-                const current = editor.getOption(monaco.editor.EditorOption.wordWrap);
-                editor.updateOptions({ wordWrap: current === "off" ? "on" : "off" });
+                const current = editor.getOption(
+                  monaco.editor.EditorOption.wordWrap
+                );
+                editor.updateOptions({
+                  wordWrap: current === "off" ? "on" : "off",
+                });
               });
 
               // Line numbers toggle
-              editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyL, () => {
-                const current = editor.getOption(monaco.editor.EditorOption.lineNumbers);
-                editor.updateOptions({ 
-                  lineNumbers: current === "off" ? "on" : "off" 
-                });
-              });
+              editor.addCommand(
+                monaco.KeyMod.CtrlCmd |
+                  monaco.KeyMod.Shift |
+                  monaco.KeyCode.KeyL,
+                () => {
+                  const current = editor.getOption(
+                    monaco.editor.EditorOption.lineNumbers
+                  );
+                  editor.updateOptions({
+                    lineNumbers: current === "off" ? "on" : "off",
+                  });
+                }
+              );
             }}
             options={{
               fontSize: 14,
@@ -414,7 +450,8 @@ const CodeEditor = ({
               tabSize: 2,
               insertSpaces: true,
               detectIndentation: true,
-              fontFamily: "'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', 'Courier New', monospace",
+              fontFamily:
+                "'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', 'Courier New', monospace",
               fontLigatures: true,
               fontWeight: "400",
               padding: { top: 16, bottom: 16 },
@@ -470,7 +507,7 @@ const CodeEditor = ({
               renderIndentGuides: true,
               highlightActiveIndentGuide: true,
               links: true,
-              colorDecorators: true,
+              // colorDecorators: true,
               codeLens: true,
               codeActionsOnSave: {
                 "source.fixAll": "explicit",
@@ -478,22 +515,11 @@ const CodeEditor = ({
                 "source.removeUnusedImports": "explicit",
               },
               // Better bracket matching
-              matchBrackets: "always",
+
               autoClosingBrackets: "always",
               autoClosingQuotes: "always",
               autoIndent: "full",
               // Better suggestions
-              quickSuggestions: {
-                other: true,
-                comments: true,
-                strings: true,
-              },
-              suggestSelection: "first",
-              wordBasedSuggestions: "matchingDocuments",
-              // Better formatting
-              formatOnPaste: true,
-              formatOnType: true,
-              // Accessibility
               accessibilitySupport: "auto",
               accessibilityPageSize: 10,
               scrollbar: {

@@ -1,5 +1,5 @@
 // client/src/components/WebContainer/TerminalInstance.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { Terminal } from "xterm";
 import "xterm/css/xterm.css";
 import { FitAddon } from "xterm-addon-fit";
@@ -17,8 +17,8 @@ const TerminalInstance = ({
   const resizeObserverRef = useRef(null);
   const isInitializedRef = useRef(false);
   const commandHistoryRef = useRef([]);
-  const historyIndexRef = useRef(-1);
-  const currentLineRef = useRef("");
+  // const historyIndexRef = useRef(-1);
+  // const currentLineRef = useRef("");
 
   useEffect(() => {
     if (!webcontainerInstance || !terminalRef.current || !isContainerReady) {
